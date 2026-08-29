@@ -9,8 +9,11 @@
   },
   "dependencies": {
     "@google/genai": "^2.12.0",
+    "better-sqlite3": "^13.0.3",
     "cors": "latest",
     "dotenv": "latest",
-    "express": "latest"
+    "express": "latest",
+    "multer": "^2.3.0",
+    "pdf-parse": "^2.4.5"
   }
 }

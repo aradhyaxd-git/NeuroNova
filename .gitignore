@@ -8,5 +8,7 @@ server/.env
 dist/
 client/dist/
 server/dist/
+.agents
+.claude
 
 .vscode/
