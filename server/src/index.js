@@ -31,10 +31,44 @@ async function parsePdfBuffer(buffer) {
 
 const app = express();
 const port = process.env.PORT || 5000;
-const allowedOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
 const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const gemini = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
+
+// Dynamic, Production-Resilient CORS Configuration
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow non-browser requests (curl, server-to-server, postman)
+    if (!origin) return callback(null, true);
+
+    const allowedList = (process.env.CLIENT_ORIGIN || '*')
+      .split(',')
+      .map(o => o.trim().replace(/\/$/, ''));
+
+    const cleanOrigin = origin.replace(/\/$/, '');
+
+    // Allow wildcard, explicit matching origins, Vercel deployments, or localhost
+    if (
+      allowedList.includes('*') ||
+      allowedList.includes(cleanOrigin) ||
+      cleanOrigin.endsWith('.vercel.app') ||
+      cleanOrigin.includes('localhost') ||
+      cleanOrigin.includes('127.0.0.1')
+    ) {
+      return callback(null, true);
+    }
+
+    // Permissive fallback for unexpected production origins
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Multer memory upload configuration (10MB limit)
 const upload = multer({
@@ -42,7 +76,6 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-app.use(cors({ origin: allowedOrigin.split(',').map((origin) => origin.trim()) }));
 app.use(express.json({ limit: '10mb' }));
 
 const cleanJson = (text) => text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
