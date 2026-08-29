@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { HiPaperAirplane, HiSparkles, HiArrowRight, HiUser, HiBolt, HiArrowPath, HiAcademicCap, HiClock, HiDocumentDuplicate } from 'react-icons/hi2';
 import { ParticlesOrb } from '../../registry/orbe/particles-orb/particles-orb';
 import { OrbStatus } from '../../registry/lib/orb-status';
+import { sendChatIntake } from '../../api/studyApi';
 
 const QUICK_PROMPTS = [
   "I want to become a Full-Stack AI Engineer in 6 weeks (6 hrs/wk)",
@@ -35,30 +36,28 @@ export default function ConversationalIntake({ messages, setMessages, profile, s
     setSending(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/chat-intake', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: updatedMessages, currentProfile: profile })
-      });
-      const data = await res.json();
+      const data = await sendChatIntake(updatedMessages, profile);
       if (data.reply) {
         setMessages([...updatedMessages, { role: 'assistant', content: data.reply }]);
       }
       if (data.extractedProfile) {
-        setProfile(data.extractedProfile);
+        setProfile(prev => ({
+          ...prev,
+          ...data.extractedProfile
+        }));
       }
     } catch (err) {
       console.error(err);
-      setMessages([
-        ...updatedMessages,
-        { role: 'assistant', content: "I've logged your learning goal! Click 'Generate Path Roadmap' to generate your custom curriculum." }
-      ]);
+      setMessages([...updatedMessages, {
+        role: 'assistant',
+        content: "I ran into an issue connecting to the AI advisor backend. You can still generate your roadmap below!"
+      }]);
     } finally {
       setSending(false);
     }
   };
 
-  const copyMessage = (text, idx) => {
+  const copyToClipboard = (text, idx) => {
     navigator.clipboard.writeText(text);
     setCopiedIdx(idx);
     setTimeout(() => setCopiedIdx(null), 2000);
@@ -67,96 +66,88 @@ export default function ConversationalIntake({ messages, setMessages, profile, s
   return (
     <div className="intake-wrapper">
       <div className="intake-header">
-        <span className="badge-pill">
-          <HiSparkles /> AI ADVISOR & INTAKE
-        </span>
-        <h2>Tell NeuroNova what you want to learn</h2>
-        <p className="subtitle">
-          Describe your career goal, preferred tech stack, or weekly availability.
-        </p>
+        <span className="badge-pill"><HiSparkles /> PILLAR 1: CONVERSATIONAL INTAKE & PROFILE SYNTHESIS</span>
+        <h2>Describe Your Goal & Target Outcome</h2>
+        <p className="subtitle">NeuroNova's AI Advisor will converse with you, extract your skills, available hours, and map out your roadmap.</p>
       </div>
 
       <div className="intake-split-grid">
-        {/* Left Column: AI Assistant Orb & Profile Context */}
-        <div className="intake-sidebar card-surface">
-          <div className="orb-display-card">
-            <ParticlesOrb
-              state={orbState}
-              size={160}
-              speed={1}
-              colorFrom="#6366f1"
-              colorTo="#a855f7"
-              label="NeuroNova Assistant Orb"
-            />
-            <div className="orb-status-row">
-              <span className="orb-status-indicator" />
-              <OrbStatus state={orbState} className="orb-status-text" />
-            </div>
+        {/* Left Column: Interactive Orb & Profile Snapshot */}
+        <div className="intake-sidebar">
+          {/* Interactive WebGL Particles Orb */}
+          <div className="orb-display-card card-surface glow-subtle">
+            <ParticlesOrb state={orbState} />
+            <OrbStatus state={orbState} />
           </div>
 
-          <div className="sidebar-heading">
-            <HiSparkles />
-            <h4>Extracted Profile</h4>
-          </div>
-
-          <div className="profile-context-item">
-            <span className="ctx-label">Target Objective</span>
-            <strong className="ctx-value">{profile.goal || 'Not specified yet'}</strong>
-          </div>
-
-          <div className="profile-context-row">
-            <div className="profile-context-item">
-              <span className="ctx-label"><HiAcademicCap /> Level</span>
-              <span className="ctx-tag">{profile.experienceLevel || 'Intermediate'}</span>
+          <div className="profile-context-card card-surface">
+            <div className="sidebar-heading">
+              <HiBolt />
+              <h4>Extracted Learner Profile</h4>
             </div>
 
             <div className="profile-context-item">
-              <span className="ctx-label"><HiClock /> Commitment</span>
-              <span className="ctx-tag">{profile.weeklyHours || 6} hrs / wk</span>
+              <span className="ctx-label">Target Goal</span>
+              <strong className="ctx-value">{profile.goal || 'Not specified yet'}</strong>
             </div>
-          </div>
 
-          <div className="profile-context-item">
-            <span className="ctx-label">Focus Topics</span>
-            <div className="ctx-tags-wrap">
-              {(profile.interests || ['Tech Foundations']).map((tag, i) => (
-                <span key={i} className="ctx-chip">{tag}</span>
-              ))}
+            <div className="profile-context-row">
+              <div className="profile-context-item">
+                <span className="ctx-label">Level</span>
+                <span className="ctx-tag">{profile.experienceLevel || 'Intermediate'}</span>
+              </div>
+              <div className="profile-context-item">
+                <span className="ctx-label">Weekly Hours</span>
+                <span className="ctx-tag font-mono">{profile.weeklyHours || 6} hrs/wk</span>
+              </div>
             </div>
-          </div>
 
-          {profile.goal && (
-            <div className="sidebar-cta">
-              <button className="btn-primary btn-block" onClick={onGenerateRoadmap} disabled={isGenerating}>
-                {isGenerating ? (
-                  <><HiArrowPath className="spin-icon" /> Generating Roadmap...</>
-                ) : (
-                  <><HiSparkles /> Generate Path Roadmap <HiArrowRight /></>
-                )}
-              </button>
+            <div className="profile-context-item">
+              <span className="ctx-label">Validated Focus Topics</span>
+              <div className="ctx-tags-wrap">
+                {(profile.interests || ['React', 'Node.js', 'System Design']).map((t, i) => (
+                  <span key={i} className="ctx-chip">{t}</span>
+                ))}
+              </div>
             </div>
-          )}
+
+            <button
+              className="btn-vibrant-primary btn-block mt-4"
+              onClick={onGenerateRoadmap}
+              disabled={isGenerating}
+            >
+              {isGenerating ? (
+                <><HiArrowPath className="spin-icon" /> Synthesizing Roadmap...</>
+              ) : (
+                <><HiSparkles /> Generate 3D Learning Path <HiArrowRight /></>
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* Right Column: Clean Chat Workspace */}
+        {/* Right Column: Chat History & Advisor */}
         <div className="chat-container card-surface">
           <div className="messages-scroll">
             {messages.map((msg, idx) => (
               <motion.div
                 key={idx}
-                initial={{ opacity: 0, y: 6 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.16 }}
                 className={`message-bubble ${msg.role === 'user' ? 'user-bubble' : 'ai-bubble'}`}
               >
                 <div className="avatar-icon">
                   {msg.role === 'user' ? <HiUser /> : <HiSparkles />}
                 </div>
+
                 <div className="bubble-content">
                   <div className="bubble-top-bar">
-                    <span className="sender-label">{msg.role === 'user' ? 'You' : 'NeuroNova AI Advisor'}</span>
-                    <button className="btn-copy-msg" onClick={() => copyMessage(msg.content, idx)} title="Copy message">
-                      <HiDocumentDuplicate /> {copiedIdx === idx ? 'Copied' : ''}
+                    <span className="sender-label">{msg.role === 'user' ? 'You' : 'NeuroNova Advisor'}</span>
+                    <button
+                      className="btn-copy-msg"
+                      onClick={() => copyToClipboard(msg.content, idx)}
+                      title="Copy text"
+                    >
+                      <HiDocumentDuplicate /> {copiedIdx === idx ? 'Copied!' : ''}
                     </button>
                   </div>
                   <p>{msg.content}</p>
@@ -165,40 +156,47 @@ export default function ConversationalIntake({ messages, setMessages, profile, s
             ))}
 
             {sending && (
-              <div className="message-bubble ai-bubble loading-bubble">
+              <div className="message-bubble ai-bubble">
                 <div className="avatar-icon"><HiSparkles /></div>
-                <div className="bubble-content">
-                  <span className="sender-label">NeuroNova AI Advisor</span>
-                  <div className="typing-indicator">
-                    <span /><span /><span />
-                  </div>
+                <div className="bubble-content thinking">
+                  <p><span className="pulse-dot" /> AI Advisor is analyzing your goals...</p>
                 </div>
               </div>
             )}
-
             <div ref={chatEndRef} />
           </div>
 
-          {messages.length <= 2 && (
-            <div className="quick-prompts-bar">
-              <span className="quick-label"><HiBolt /> Quick Inspiration:</span>
-              <div className="prompts-grid">
-                {QUICK_PROMPTS.map((p, i) => (
-                  <button key={i} className="prompt-chip" onClick={() => handleSend(p)}>
-                    {p}
-                  </button>
-                ))}
-              </div>
+          {/* Quick Starter Prompts */}
+          <div className="quick-prompts-bar">
+            <span className="quick-label"><HiAcademicCap /> Starter Intent Suggestions:</span>
+            <div className="prompts-grid">
+              {QUICK_PROMPTS.map((promptText, i) => (
+                <button
+                  key={i}
+                  className="prompt-chip"
+                  onClick={() => handleSend(promptText)}
+                  disabled={sending}
+                >
+                  {promptText}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
 
-          <form className="chat-input-row" onSubmit={(e) => { e.preventDefault(); handleSend(); }}>
+          {/* Chat Input Bar */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSend();
+            }}
+            className="chat-input-row"
+          >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="e.g. I want to learn React, Node.js and Gemini AI apps in 6 weeks..."
-              disabled={sending || isGenerating}
+              placeholder="e.g. I want to build production AI applications in 6 weeks..."
+              disabled={sending}
             />
             <button type="submit" className="btn-send" disabled={!input.trim() || sending}>
               <HiPaperAirplane />

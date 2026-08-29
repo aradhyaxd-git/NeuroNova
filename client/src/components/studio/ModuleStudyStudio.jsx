@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HiXMark, HiSparkles, HiRectangleStack, HiCheckBadge, HiArrowPath } from 'react-icons/hi2';
 import FlashcardList from '../FlashcardList';
 import Quiz from '../Quiz';
+import { createStudySet } from '../../api/studyApi';
 
 export default function ModuleStudyStudio({ module, onClose }) {
   const [activeTab, setActiveTab] = useState('flashcards');
@@ -15,15 +16,10 @@ export default function ModuleStudyStudio({ module, onClose }) {
     const fetchStudySet = async () => {
       setLoading(true);
       setError('');
+
       try {
-        const res = await fetch('http://localhost:5000/api/study-set', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            notes: `Module Title: ${module.title}. Type: ${module.type}. Details: ${module.explainability?.detailedWhy || module.explainability?.topReason || 'Fundamental learning module'}. Focus topics: ${(module.explainability?.skillGains || []).join(', ')}.`
-          })
-        });
-        const data = await res.json();
+        const notes = `Module Title: ${module.title}. Type: ${module.type}. Details: ${module.explainability?.detailedWhy || module.explainability?.topReason || 'Fundamental learning module'}. Focus topics: ${(module.explainability?.skillGains || []).join(', ')}.`;
+        const data = await createStudySet(notes);
         if (isMounted) {
           if (data.error) setError(data.error);
           else setStudyData(data);
@@ -59,44 +55,40 @@ export default function ModuleStudyStudio({ module, onClose }) {
             <button className="btn-close" onClick={onClose}><HiXMark /></button>
           </div>
 
-          <div className="studio-tabs">
+          <div className="studio-tabs font-mono">
             <button
               className={`studio-tab-btn ${activeTab === 'flashcards' ? 'active' : ''}`}
               onClick={() => setActiveTab('flashcards')}
             >
-              <HiRectangleStack /> Active Recall Flashcards ({studyData?.flashcards?.length || 0})
+              <HiRectangleStack /> 3D Active Recall Deck
             </button>
             <button
               className={`studio-tab-btn ${activeTab === 'quiz' ? 'active' : ''}`}
               onClick={() => setActiveTab('quiz')}
             >
-              <HiCheckBadge /> Knowledge Quiz ({studyData?.quiz?.length || 0})
+              <HiCheckBadge /> Knowledge Check Quiz
             </button>
           </div>
 
-          <div className="studio-body">
-            {loading && (
-              <div className="studio-loading">
-                <HiArrowPath className="spin-icon text-indigo" />
-                <p>Generating personalized flashcards & quiz for <strong>{module.title}</strong>...</p>
+          <div className="modal-body">
+            {loading ? (
+              <div className="studio-loading-state text-center">
+                <HiArrowPath className="spin-icon-lg text-indigo" />
+                <p>Synthesizing 3D active recall materials for <strong>{module.title}</strong>...</p>
               </div>
-            )}
-
-            {!loading && error && (
-              <div className="empty-state">
-                <p>{error}</p>
-                <button className="btn-secondary" onClick={() => window.location.reload()}>Retry</button>
+            ) : error ? (
+              <div className="studio-error-state text-center">
+                <p className="text-danger">{error}</p>
               </div>
-            )}
-
-            {!loading && studyData && (
-              <div className="studio-content-panel">
-                {activeTab === 'flashcards' ? (
-                  <FlashcardList cards={studyData.flashcards || []} />
-                ) : (
-                  <Quiz quiz={studyData.quiz || []} />
+            ) : (
+              <>
+                {activeTab === 'flashcards' && (
+                  <FlashcardList flashcards={studyData?.flashcards || []} />
                 )}
-              </div>
+                {activeTab === 'quiz' && (
+                  <Quiz quiz={studyData?.quiz || []} />
+                )}
+              </>
             )}
           </div>
         </motion.div>

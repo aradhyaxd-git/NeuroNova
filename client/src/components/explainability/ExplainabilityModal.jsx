@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HiXMark, HiSparkles, HiPaperAirplane, HiLightBulb, HiBookOpen, HiLink, HiArrowTopRightOnSquare } from 'react-icons/hi2';
+import { explainModule } from '../../api/studyApi';
 
 export function resolveDocUrl(moduleTitle = '', resourceTitle = '', resourceUrl = '', type = '') {
   if (resourceUrl && resourceUrl !== '#' && resourceUrl !== 'https://developer.mozilla.org' && resourceUrl.length > 15) {
@@ -36,16 +37,7 @@ export default function ExplainabilityModal({ module, learnerGoal, onClose }) {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/explain-module', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          moduleTitle: module.title,
-          userQuestion: question,
-          learnerGoal
-        })
-      });
-      const data = await res.json();
+      const data = await explainModule(module.title, question, learnerGoal);
       setAnswer(data.answer || 'No answer generated.');
     } catch (err) {
       console.error(err);
