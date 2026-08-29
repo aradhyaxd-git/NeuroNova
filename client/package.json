@@ -3,15 +3,22 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "scripts": { "dev": "vite", "build": "vite build", "preview": "vite preview" },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.9",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
     "@vitejs/plugin-react": "latest",
     "axios": "latest",
     "framer-motion": "latest",
     "react": "latest",
     "react-dom": "latest",
     "react-icons": "latest",
+    "three": "^0.185.1",
     "vite": "latest"
-  },
-  "devDependencies": {}
+  }
 }
