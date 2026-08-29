@@ -68,7 +68,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 
 // Multer memory upload configuration (10MB limit)
 const upload = multer({
