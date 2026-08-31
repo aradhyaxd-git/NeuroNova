@@ -79,6 +79,7 @@ app.use(express.json({ limit: '10mb' }));
 
 const cleanJson = (text) => text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
 
+app.get('/', (_req, res) => res.json({ status: 'ok', message: 'NeuroNova API Service' }));
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', hasGemini: !!gemini, hasDb: true }));
 
 // Load all persistent user data from SQLite DB
@@ -511,5 +512,11 @@ app.post('/api/study-set', async (req, res) => {
   }
 });
 
+// Global Error Handling & 404 Fallback
 app.use((_req, res) => res.status(404).json({ error: 'Route not found.' }));
-app.listen(port, () => console.log(`NeuroNova API running on port ${port} with Multer & PDF Parser enabled`));
+app.use((err, _req, res, _next) => {
+  console.error('Unhandled Server Error:', err);
+  res.status(500).json({ error: err.message || 'Internal Server Error' });
+});
+
+app.listen(port, '0.0.0.0', () => console.log(`NeuroNova API running on 0.0.0.0:${port} with Multer & PDF Parser enabled`));
