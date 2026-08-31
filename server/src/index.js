@@ -38,7 +38,6 @@ const gemini = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
 // Dynamic, Production-Resilient CORS Configuration
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow non-browser requests (curl, server-to-server, postman)
     if (!origin) return callback(null, true);
 
     const allowedList = (process.env.CLIENT_ORIGIN || '*')
@@ -47,7 +46,6 @@ const corsOptions = {
 
     const cleanOrigin = origin.replace(/\/$/, '');
 
-    // Allow wildcard, explicit matching origins, Vercel deployments, or localhost
     if (
       allowedList.includes('*') ||
       allowedList.includes(cleanOrigin) ||
@@ -58,7 +56,6 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    // Permissive fallback for unexpected production origins
     callback(null, true);
   },
   credentials: true,
@@ -519,4 +516,8 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
 
-app.listen(port, '0.0.0.0', () => console.log(`NeuroNova API running on 0.0.0.0:${port} with Multer & PDF Parser enabled`));
+if (!process.env.VERCEL) {
+  app.listen(port, '0.0.0.0', () => console.log(`NeuroNova API running on 0.0.0.0:${port} with Multer & PDF Parser enabled`));
+}
+
+export default app;
